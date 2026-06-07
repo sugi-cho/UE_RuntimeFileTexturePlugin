@@ -1,0 +1,22 @@
+{
+	"FileVersion": 3,
+	"Version": 1,
+	"VersionName": "1.0",
+	"FriendlyName": "Runtime File Texture",
+	"Description": "Select a local image or video file at runtime and apply it to a mesh material texture parameter.",
+	"Category": "Rendering",
+	"CreatedBy": "OpenAI",
+	"CreatedByURL": "https://openai.com",
+	"CanContainContent": false,
+	"IsBetaVersion": true,
+	"IsExperimentalVersion": false,
+	"Installed": false,
+	"EnabledByDefault": true,
+	"Modules": [
+		{
+			"Name": "RuntimeFileTexture",
+			"Type": "Runtime",
+			"LoadingPhase": "Default"
+		}
+	]
+}
