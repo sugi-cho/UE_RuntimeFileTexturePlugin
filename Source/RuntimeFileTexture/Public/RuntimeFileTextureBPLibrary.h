@@ -33,4 +33,7 @@ public:
 		int32 MaterialIndex = 0,
 		bool bLoopVideo = true
 	);
+
+	UFUNCTION(BlueprintCallable, Category="Runtime File Texture")
+	static void StopVideoForMesh(UMeshComponent* TargetMesh);
 };

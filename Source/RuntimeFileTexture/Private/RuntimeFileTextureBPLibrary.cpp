@@ -7,6 +7,7 @@
 #include "MediaPlayer.h"
 #include "MediaTexture.h"
 #include "Misc/Paths.h"
+#include "RuntimeFileTexturePlaybackSubsystem.h"
 #include "RuntimeFileTextureInternal.h"
 
 namespace
@@ -133,32 +134,63 @@ FRuntimeFileTextureResult URuntimeFileTextureBPLibrary::ApplyFileToMesh(
 		return Result;
 	}
 
-	UMediaPlayer* MediaPlayer = NewObject<UMediaPlayer>(TargetMesh);
-	UMediaTexture* MediaTexture = NewObject<UMediaTexture>(TargetMesh);
-	UFileMediaSource* MediaSource = NewObject<UFileMediaSource>(TargetMesh);
-	if (!MediaPlayer || !MediaTexture || !MediaSource)
+	UWorld* World = TargetMesh->GetWorld();
+	if (!World)
 	{
-		return MakeErrorResult(FilePath, TEXT("Failed to open video media source."));
+		return MakeErrorResult(FilePath, TEXT("TargetMesh world is not available."));
 	}
 
-	MediaSource->SetFilePath(FilePath);
-	MediaPlayer->SetLooping(bLoopVideo);
-	MediaTexture->SetMediaPlayer(MediaPlayer);
-	MediaTexture->UpdateResource();
+	URuntimeFileTexturePlaybackSubsystem* PlaybackSubsystem = World->GetSubsystem<URuntimeFileTexturePlaybackSubsystem>();
+	if (!PlaybackSubsystem)
+	{
+		return MakeErrorResult(FilePath, TEXT("Failed to acquire playback subsystem."));
+	}
+
+	URuntimeFileTexturePlaybackSession* Session = PlaybackSubsystem->GetOrCreateSession(TargetMesh);
+	if (!Session)
+	{
+		return MakeErrorResult(FilePath, TEXT("Failed to create video playback session."));
+	}
+
+	FString VideoError;
+	if (!Session->Initialize(TargetMesh, FilePath, bLoopVideo, VideoError))
+	{
+		PlaybackSubsystem->StopSession(TargetMesh);
+		return MakeErrorResult(FilePath, VideoError);
+	}
+
+	UMediaTexture* MediaTexture = Session->GetMediaTexture();
+	if (!MediaTexture)
+	{
+		PlaybackSubsystem->StopSession(TargetMesh);
+		return MakeErrorResult(FilePath, TEXT("MediaTexture is not available."));
+	}
+
 	FRuntimeFileTextureResult TextureResult = ApplyTextureToMesh(TargetMesh, MediaTexture, TextureParameterName, MaterialIndex);
 	if (!TextureResult.bSuccess)
 	{
+		PlaybackSubsystem->StopSession(TargetMesh);
 		TextureResult.FilePath = FilePath;
 		return TextureResult;
 	}
 
-	if (!MediaPlayer->OpenSource(MediaSource))
-	{
-		return MakeErrorResult(FilePath, TEXT("Failed to open video media source."));
-	}
-
-	MediaPlayer->Play();
 	TextureResult.FilePath = FilePath;
 	TextureResult.Type = ERuntimeFileTextureType::Video;
 	return TextureResult;
+}
+
+void URuntimeFileTextureBPLibrary::StopVideoForMesh(UMeshComponent* TargetMesh)
+{
+	if (!TargetMesh)
+	{
+		return;
+	}
+
+	if (UWorld* World = TargetMesh->GetWorld())
+	{
+		if (URuntimeFileTexturePlaybackSubsystem* PlaybackSubsystem = World->GetSubsystem<URuntimeFileTexturePlaybackSubsystem>())
+		{
+			PlaybackSubsystem->StopSession(TargetMesh);
+		}
+	}
 }
