@@ -6,6 +6,7 @@
 #include "RuntimeFileTextureBPLibrary.generated.h"
 
 class UMeshComponent;
+class UTexture;
 
 UCLASS()
 class RUNTIMEFILETEXTURE_API URuntimeFileTextureBPLibrary : public UBlueprintFunctionLibrary
@@ -15,6 +16,14 @@ class RUNTIMEFILETEXTURE_API URuntimeFileTextureBPLibrary : public UBlueprintFun
 public:
 	UFUNCTION(BlueprintCallable, Category="Runtime File Texture")
 	static bool SelectFile(FString& OutFilePath);
+
+	UFUNCTION(BlueprintCallable, Category="Runtime File Texture")
+	static FRuntimeFileTextureResult ApplyTextureToMesh(
+		UMeshComponent* TargetMesh,
+		UTexture* Texture,
+		FName TextureParameterName,
+		int32 MaterialIndex = 0
+	);
 
 	UFUNCTION(BlueprintCallable, Category="Runtime File Texture")
 	static FRuntimeFileTextureResult ApplyFileToMesh(

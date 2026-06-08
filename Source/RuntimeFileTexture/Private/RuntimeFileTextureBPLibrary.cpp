@@ -9,9 +9,85 @@
 #include "Misc/Paths.h"
 #include "RuntimeFileTextureInternal.h"
 
+namespace
+{
+	UMaterialInstanceDynamic* GetOrCreateMID(UMeshComponent* TargetMesh, int32 MaterialIndex, FString& OutError)
+	{
+		OutError.Reset();
+
+		if (!TargetMesh)
+		{
+			OutError = TEXT("TargetMesh is not set.");
+			return nullptr;
+		}
+
+		if (UMaterialInstanceDynamic* ExistingMID = Cast<UMaterialInstanceDynamic>(TargetMesh->GetMaterial(MaterialIndex)))
+		{
+			return ExistingMID;
+		}
+
+		UMaterialInterface* BaseMaterial = TargetMesh->GetMaterial(MaterialIndex);
+		if (!BaseMaterial)
+		{
+			OutError = TEXT("Failed to create dynamic material instance.");
+			return nullptr;
+		}
+
+		UMaterialInstanceDynamic* MID = UMaterialInstanceDynamic::Create(BaseMaterial, TargetMesh);
+		if (!MID)
+		{
+			OutError = TEXT("Failed to create dynamic material instance.");
+			return nullptr;
+		}
+
+		TargetMesh->SetMaterial(MaterialIndex, MID);
+		return MID;
+	}
+
+	FRuntimeFileTextureResult MakeErrorResult(const FString& FilePath, const FString& Error)
+	{
+		FRuntimeFileTextureResult Result;
+		Result.FilePath = FilePath;
+		Result.Error = Error;
+		return Result;
+	}
+}
+
 bool URuntimeFileTextureBPLibrary::SelectFile(FString& OutFilePath)
 {
 	return RuntimeFileTextureInternal::SelectFileDialog(OutFilePath);
+}
+
+FRuntimeFileTextureResult URuntimeFileTextureBPLibrary::ApplyTextureToMesh(
+	UMeshComponent* TargetMesh,
+	UTexture* Texture,
+	FName TextureParameterName,
+	int32 MaterialIndex)
+{
+	if (!Texture)
+	{
+		return MakeErrorResult(TEXT(""), TEXT("Texture is not set."));
+	}
+
+	if (TextureParameterName.IsNone())
+	{
+		return MakeErrorResult(TEXT(""), TEXT("TextureParameterName is not set."));
+	}
+
+	FString Error;
+	UMaterialInstanceDynamic* MID = GetOrCreateMID(TargetMesh, MaterialIndex, Error);
+	if (!MID)
+	{
+		return MakeErrorResult(TEXT(""), Error);
+	}
+
+	MID->SetTextureParameterValue(TextureParameterName, Texture);
+
+	FRuntimeFileTextureResult Result;
+	Result.bSuccess = true;
+	Result.Type = ERuntimeFileTextureType::None;
+	Result.Texture = Texture;
+	return Result;
 }
 
 FRuntimeFileTextureResult URuntimeFileTextureBPLibrary::ApplyFileToMesh(
@@ -23,46 +99,18 @@ FRuntimeFileTextureResult URuntimeFileTextureBPLibrary::ApplyFileToMesh(
 {
 	if (!TargetMesh)
 	{
-		FRuntimeFileTextureResult Result;
-		Result.FilePath = FilePath;
-		Result.Error = TEXT("TargetMesh is not set.");
-		return Result;
+		return MakeErrorResult(FilePath, TEXT("TargetMesh is not set."));
 	}
 
 	if (TextureParameterName.IsNone())
 	{
-		FRuntimeFileTextureResult Result;
-		Result.FilePath = FilePath;
-		Result.Error = TEXT("TextureParameterName is not set.");
-		return Result;
+		return MakeErrorResult(FilePath, TEXT("TextureParameterName is not set."));
 	}
 
 	if (!RuntimeFileTextureInternal::IsSupportedFile(FilePath))
 	{
-		FRuntimeFileTextureResult Result;
-		Result.FilePath = FilePath;
-		Result.Error = FString::Printf(TEXT("Unsupported file extension: %s"), *FPaths::GetExtension(FilePath));
-		return Result;
+		return MakeErrorResult(FilePath, FString::Printf(TEXT("Unsupported file extension: %s"), *FPaths::GetExtension(FilePath)));
 	}
-
-	UMaterialInterface* BaseMaterial = TargetMesh->GetMaterial(MaterialIndex);
-	if (!BaseMaterial)
-	{
-		FRuntimeFileTextureResult Result;
-		Result.FilePath = FilePath;
-		Result.Error = TEXT("Failed to create dynamic material instance.");
-		return Result;
-	}
-
-	UMaterialInstanceDynamic* MID = UMaterialInstanceDynamic::Create(BaseMaterial, TargetMesh);
-	if (!MID)
-	{
-		FRuntimeFileTextureResult Result;
-		Result.FilePath = FilePath;
-		Result.Error = TEXT("Failed to create dynamic material instance.");
-		return Result;
-	}
-	TargetMesh->SetMaterial(MaterialIndex, MID);
 
 	if (RuntimeFileTextureInternal::IsSupportedImageFile(FilePath))
 	{
@@ -70,18 +118,18 @@ FRuntimeFileTextureResult URuntimeFileTextureBPLibrary::ApplyFileToMesh(
 		UTexture2D* Texture = RuntimeFileTextureInternal::LoadImageTexture(TargetMesh, FilePath, Error);
 		if (!Texture)
 		{
-			FRuntimeFileTextureResult Result;
+			return MakeErrorResult(FilePath, Error);
+		}
+
+		FRuntimeFileTextureResult Result = ApplyTextureToMesh(TargetMesh, Texture, TextureParameterName, MaterialIndex);
+		if (!Result.bSuccess)
+		{
 			Result.FilePath = FilePath;
-			Result.Error = Error;
 			return Result;
 		}
 
-		MID->SetTextureParameterValue(TextureParameterName, Texture);
-		FRuntimeFileTextureResult Result;
-		Result.bSuccess = true;
 		Result.FilePath = FilePath;
 		Result.Type = ERuntimeFileTextureType::Image;
-		Result.Texture = Texture;
 		return Result;
 	}
 
@@ -90,31 +138,27 @@ FRuntimeFileTextureResult URuntimeFileTextureBPLibrary::ApplyFileToMesh(
 	UFileMediaSource* MediaSource = NewObject<UFileMediaSource>(TargetMesh);
 	if (!MediaPlayer || !MediaTexture || !MediaSource)
 	{
-		FRuntimeFileTextureResult Result;
-		Result.FilePath = FilePath;
-		Result.Error = TEXT("Failed to open video media source.");
-		return Result;
+		return MakeErrorResult(FilePath, TEXT("Failed to open video media source."));
 	}
 
 	MediaSource->SetFilePath(FilePath);
 	MediaPlayer->SetLooping(bLoopVideo);
 	MediaTexture->SetMediaPlayer(MediaPlayer);
 	MediaTexture->UpdateResource();
-	MID->SetTextureParameterValue(TextureParameterName, MediaTexture);
+	FRuntimeFileTextureResult TextureResult = ApplyTextureToMesh(TargetMesh, MediaTexture, TextureParameterName, MaterialIndex);
+	if (!TextureResult.bSuccess)
+	{
+		TextureResult.FilePath = FilePath;
+		return TextureResult;
+	}
 
 	if (!MediaPlayer->OpenSource(MediaSource))
 	{
-		FRuntimeFileTextureResult Result;
-		Result.FilePath = FilePath;
-		Result.Error = TEXT("Failed to open video media source.");
-		return Result;
+		return MakeErrorResult(FilePath, TEXT("Failed to open video media source."));
 	}
 
 	MediaPlayer->Play();
-	FRuntimeFileTextureResult Result;
-	Result.bSuccess = true;
-	Result.FilePath = FilePath;
-	Result.Type = ERuntimeFileTextureType::Video;
-	Result.Texture = MediaTexture;
-	return Result;
+	TextureResult.FilePath = FilePath;
+	TextureResult.Type = ERuntimeFileTextureType::Video;
+	return TextureResult;
 }

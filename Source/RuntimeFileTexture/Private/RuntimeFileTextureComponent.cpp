@@ -129,16 +129,27 @@ UMaterialInstanceDynamic* URuntimeFileTextureComponent::GetOrCreateMID(FString& 
 		return nullptr;
 	}
 
+	if (RuntimeMID)
+	{
+		if (MeshComponent->GetMaterial(MaterialIndex) != RuntimeMID)
+		{
+			MeshComponent->SetMaterial(MaterialIndex, RuntimeMID);
+		}
+
+		return RuntimeMID;
+	}
+
+	if (UMaterialInstanceDynamic* ExistingMID = Cast<UMaterialInstanceDynamic>(MeshComponent->GetMaterial(MaterialIndex)))
+	{
+		RuntimeMID = ExistingMID;
+		return RuntimeMID;
+	}
+
 	UMaterialInterface* BaseMaterial = MeshComponent->GetMaterial(MaterialIndex);
 	if (!BaseMaterial)
 	{
 		OutError = TEXT("Failed to create dynamic material instance.");
 		return nullptr;
-	}
-
-	if (RuntimeMID)
-	{
-		return RuntimeMID;
 	}
 
 	RuntimeMID = UMaterialInstanceDynamic::Create(BaseMaterial, this);
@@ -154,6 +165,15 @@ UMaterialInstanceDynamic* URuntimeFileTextureComponent::GetOrCreateMID(FString& 
 
 FRuntimeFileTextureResult URuntimeFileTextureComponent::ApplyTextureToMesh(UTexture* Texture, ERuntimeFileTextureType Type, const FString& FilePath)
 {
+	if (!Texture)
+	{
+		FRuntimeFileTextureResult Result;
+		Result.FilePath = FilePath;
+		Result.Error = TEXT("Texture is not set.");
+		CacheLastResult(Result);
+		return Result;
+	}
+
 	FString Error;
 	UMaterialInstanceDynamic* MID = GetOrCreateMID(Error);
 	if (!MID)
