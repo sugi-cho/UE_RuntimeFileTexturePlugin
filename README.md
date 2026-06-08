@@ -58,6 +58,31 @@ static bool SelectFile(FString& OutFilePath);
 - まず `OutFilePath` を受け取る
 - 成功したら、そのパスを `ApplyFileToMesh` に渡す
 
+### `ApplyTextureToMesh`
+
+```cpp
+static FRuntimeFileTextureResult ApplyTextureToMesh(
+    UMeshComponent* TargetMesh,
+    UTexture* Texture,
+    FName TextureParameterName,
+    int32 MaterialIndex = 0
+);
+```
+
+既存の `UTexture` を Mesh のマテリアルへ適用します。
+
+使い方:
+
+1. 対象 Mesh を渡す
+2. 適用したい `UTexture` を渡す
+3. マテリアルの Texture Parameter 名を渡す
+4. 戻り値の `bSuccess` と `Error` を確認する
+
+補足:
+
+- 既に Dynamic Material Instance がある場合は、それを再利用して Texture Parameter だけを更新します。
+- 同じ Mesh に対して複数回適用しても、マテリアルを再生成しません。
+
 ### `ApplyFileToMesh`
 
 ```cpp
@@ -79,6 +104,11 @@ static FRuntimeFileTextureResult ApplyFileToMesh(
 3. ファイルパスを渡す
 4. 戻り値の `bSuccess` と `Error` を確認する
 
+補足:
+
+- 既に Dynamic Material Instance がある場合は、それを再利用して Texture Parameter だけを更新します。
+- 動画の場合は `UMediaTexture` を作成して、`ApplyTextureToMesh` 経由で適用します。
+
 ### 戻り値 `FRuntimeFileTextureResult`
 
 - `bSuccess`
@@ -89,6 +119,7 @@ static FRuntimeFileTextureResult ApplyFileToMesh(
   - `None` / `Image` / `Video`
 - `Texture`
   - 適用したテクスチャ
+  - 動画の場合は `UMediaTexture`
 - `Error`
   - 失敗時の理由
 
