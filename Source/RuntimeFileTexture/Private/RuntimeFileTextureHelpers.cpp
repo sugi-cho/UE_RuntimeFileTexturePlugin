@@ -87,8 +87,10 @@ UTexture2D* RuntimeFileTextureInternal::LoadImageTexture(UObject* Outer, const F
 
 	Texture->NeverStream = true;
 	Texture->SRGB = !bUseFloat;
-	Texture->MipGenSettings = TMGS_NoMipmaps;
 	Texture->CompressionSettings = bUseFloat ? TC_HDR : TC_Default;
+#if WITH_EDITORONLY_DATA
+	Texture->MipGenSettings = TMGS_NoMipmaps;
+#endif
 
 	if (bUseFloat)
 	{
