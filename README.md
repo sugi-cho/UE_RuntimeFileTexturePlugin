@@ -2,6 +2,12 @@
 
 Windows のローカル画像・動画ファイルを選んで、メッシュのマテリアルテクスチャへ適用する Runtime プラグインです。
 
+## Author
+
+- Author: Hironori Sugino
+- Website: https://sugi.cc
+- Original Repository: https://github.com/sugi-cho/UE_RuntimeFileTexturePlugin
+
 ## できること
 
 - ファイル選択ダイアログを表示
