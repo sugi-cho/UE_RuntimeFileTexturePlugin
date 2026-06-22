@@ -58,14 +58,14 @@ bool RuntimeFileTextureInternal::SelectFileDialog(FString& OutFilePath)
 
 	static const COMDLG_FILTERSPEC Filters[] =
 	{
-		{ L"Image and Video Files (*.png;*.jpg;*.jpeg;*.bmp;*.tga;*.exr;*.mp4;*.mov;*.wmv;*.avi;*.m4v)", L"*.png;*.jpg;*.jpeg;*.bmp;*.tga;*.exr;*.mp4;*.mov;*.wmv;*.avi;*.m4v" },
-		{ L"Image Files (*.png;*.jpg;*.jpeg;*.bmp;*.tga;*.exr)", L"*.png;*.jpg;*.jpeg;*.bmp;*.tga;*.exr" },
+		{ L"Image and Video Files (*.png;*.jpg;*.jpeg;*.bmp;*.tga;*.tif;*.tiff;*.exr;*.mp4;*.mov;*.wmv;*.avi;*.m4v)", L"*.png;*.jpg;*.jpeg;*.bmp;*.tga;*.tif;*.tiff;*.exr;*.mp4;*.mov;*.wmv;*.avi;*.m4v" },
+		{ L"Image Files (*.png;*.jpg;*.jpeg;*.bmp;*.tga;*.tif;*.tiff;*.exr)", L"*.png;*.jpg;*.jpeg;*.bmp;*.tga;*.tif;*.tiff;*.exr" },
 		{ L"Video Files (*.mp4;*.mov;*.wmv;*.avi;*.m4v)", L"*.mp4;*.mov;*.wmv;*.avi;*.m4v" },
 		{ L"All Files (*.*)", L"*.*" }
 	};
 	Dialog->SetFileTypes(UE_ARRAY_COUNT(Filters), Filters);
 	Dialog->SetFileTypeIndex(1);
-	Dialog->SetTitle(L"Select Image or Video File");
+	Dialog->SetTitle(L"Select Image, TIFF, or Video File");
 
 	const HRESULT ShowHr = Dialog->Show(nullptr);
 	const bool bSuccess = SUCCEEDED(ShowHr) && GetDialogFilePath(Dialog, OutFilePath);

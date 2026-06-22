@@ -132,6 +132,8 @@ static FRuntimeFileTextureResult ApplyFileToMesh(
 - `.jpeg`
 - `.bmp`
 - `.tga`
+- `.tif`
+- `.tiff`
 - `.exr`
 
 動画:
@@ -146,3 +148,4 @@ static FRuntimeFileTextureResult ApplyFileToMesh(
 
 - 動画再生の継続管理は Component 利用が推奨です
 - 画像と動画は同じ Texture Parameter に差し替え可能です
+- TIFF は Windows 環境で、WIC で読める一般的な単一フレーム画像を対象にしています

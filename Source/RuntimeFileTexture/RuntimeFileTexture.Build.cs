@@ -23,6 +23,7 @@ public class RuntimeFileTexture : ModuleRules
 		if (Target.Platform == UnrealTargetPlatform.Win64)
 		{
 			PublicDefinitions.Add("RUNTIME_FILE_TEXTURE_WINDOWS=1");
+			PublicSystemLibraries.Add("windowscodecs.lib");
 		}
 		else
 		{

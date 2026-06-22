@@ -11,4 +11,5 @@ namespace RuntimeFileTextureInternal
 	bool IsSupportedVideoFile(const FString& FilePath);
 	bool IsSupportedFile(const FString& FilePath);
 	UTexture2D* LoadImageTexture(UObject* Outer, const FString& FilePath, FString& OutError);
+	UTexture2D* LoadTiffTexture(UObject* Outer, const FString& FilePath, FString& OutError);
 }
