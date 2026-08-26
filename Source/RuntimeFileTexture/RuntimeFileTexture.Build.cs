@@ -10,6 +10,7 @@ public class RuntimeFileTexture : ModuleRules
 		{
 			"Core",
 			"CoreUObject",
+			"DeveloperSettings",
 			"Engine",
 			"MediaAssets"
 		});

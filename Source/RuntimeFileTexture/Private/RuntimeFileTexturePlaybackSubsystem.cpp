@@ -8,6 +8,8 @@
 #include "GameFramework/Actor.h"
 #include "Misc/Paths.h"
 #include "Misc/Timespan.h"
+#include "RuntimeFileTextureInternal.h"
+#include "RuntimeFileTextureLog.h"
 
 bool URuntimeFileTexturePlaybackSession::Initialize(UMeshComponent* InTargetMesh, const FString& FilePath, bool bLoopVideo, FString& OutError)
 {
@@ -35,7 +37,10 @@ bool URuntimeFileTexturePlaybackSession::Initialize(UMeshComponent* InTargetMesh
 	}
 
 	RuntimeFileMediaSource->SetFilePath(FilePath);
+	RuntimeFileTextureInternal::ConfigureMediaPlayer(RuntimeMediaPlayer);
 	RuntimeMediaPlayer->SetLooping(bLooping);
+	RuntimeMediaPlayer->OnMediaOpened.AddDynamic(this, &URuntimeFileTexturePlaybackSession::HandleMediaOpened);
+	RuntimeMediaPlayer->OnMediaOpenFailed.AddDynamic(this, &URuntimeFileTexturePlaybackSession::HandleMediaOpenFailed);
 	RuntimeMediaPlayer->OnEndReached.AddDynamic(this, &URuntimeFileTexturePlaybackSession::HandleEndReached);
 	RuntimeMediaTexture->SetMediaPlayer(RuntimeMediaPlayer);
 	RuntimeMediaTexture->UpdateResource();
@@ -67,6 +72,8 @@ void URuntimeFileTexturePlaybackSession::Stop()
 {
 	if (RuntimeMediaPlayer)
 	{
+		RuntimeMediaPlayer->OnMediaOpened.RemoveDynamic(this, &URuntimeFileTexturePlaybackSession::HandleMediaOpened);
+		RuntimeMediaPlayer->OnMediaOpenFailed.RemoveDynamic(this, &URuntimeFileTexturePlaybackSession::HandleMediaOpenFailed);
 		RuntimeMediaPlayer->OnEndReached.RemoveDynamic(this, &URuntimeFileTexturePlaybackSession::HandleEndReached);
 		RuntimeMediaPlayer->Close();
 	}
@@ -87,6 +94,31 @@ void URuntimeFileTexturePlaybackSession::Stop()
 	RuntimeFileMediaSource = nullptr;
 	TargetMesh.Reset();
 	bLooping = true;
+}
+
+void URuntimeFileTexturePlaybackSession::HandleMediaOpened(FString OpenedUrl)
+{
+	const FName RequestedPlayer = RuntimeFileTextureInternal::GetDesiredMediaPlayerName();
+	const FName ActivePlayer = RuntimeMediaPlayer ? RuntimeMediaPlayer->GetPlayerName() : NAME_None;
+	if (ActivePlayer == RequestedPlayer)
+	{
+		UE_LOG(LogRuntimeFileTexture, Display,
+			TEXT("Video opened [RequestedPlayer=%s ActivePlayer=%s URL=%s]"),
+			*RequestedPlayer.ToString(), *ActivePlayer.ToString(), *OpenedUrl);
+	}
+	else
+	{
+		UE_LOG(LogRuntimeFileTexture, Warning,
+			TEXT("Video opened with unexpected player [RequestedPlayer=%s ActivePlayer=%s URL=%s]"),
+			*RequestedPlayer.ToString(), *ActivePlayer.ToString(), *OpenedUrl);
+	}
+}
+
+void URuntimeFileTexturePlaybackSession::HandleMediaOpenFailed(FString FailedUrl)
+{
+	UE_LOG(LogRuntimeFileTexture, Error,
+		TEXT("Video open failed [RequestedPlayer=%s URL=%s]"),
+		*RuntimeFileTextureInternal::GetDesiredMediaPlayerName().ToString(), *FailedUrl);
 }
 
 void URuntimeFileTexturePlaybackSession::HandleEndReached()

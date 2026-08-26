@@ -24,6 +24,12 @@ public:
 
 private:
 	UFUNCTION()
+	void HandleMediaOpened(FString OpenedUrl);
+
+	UFUNCTION()
+	void HandleMediaOpenFailed(FString FailedUrl);
+
+	UFUNCTION()
 	void HandleEndReached();
 
 	TWeakObjectPtr<UMeshComponent> TargetMesh;

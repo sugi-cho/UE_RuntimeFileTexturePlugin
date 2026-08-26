@@ -78,6 +78,12 @@ public:
 	void StopVideo();
 
 private:
+	UFUNCTION()
+	void HandleMediaOpened(FString OpenedUrl);
+
+	UFUNCTION()
+	void HandleMediaOpenFailed(FString FailedUrl);
+
 	UMeshComponent* ResolveTargetMesh(FString& OutError) const;
 	FRuntimeFileTextureResult ApplyTextureToMesh(UTexture* Texture, ERuntimeFileTextureType Type, const FString& FilePath);
 	FRuntimeFileTextureResult ApplyImageFile(const FString& FilePath);

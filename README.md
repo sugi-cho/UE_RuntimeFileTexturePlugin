@@ -115,6 +115,7 @@ static FRuntimeFileTextureResult ApplyFileToMesh(
 - 既に Dynamic Material Instance がある場合は、それを再利用して Texture Parameter だけを更新します。
 - 動画の場合は `UMediaTexture` を作成して、`ApplyTextureToMesh` 経由で適用します。
 - 同じ `UMediaPlayer` に `UMediaSoundComponent` を接続するため、動画に音声トラックがあれば映像と一緒に再生します。
+- 動画再生には Electra Player を使用します。Windows では `Project Settings > Plugins > FilePlay` の `Enable Electra D3D12 Hardware Decoding` が既定で有効になり、D3D12 ハードウェアデコードを使用します。設定変更後は Editor を再起動してください。
 
 ### 戻り値 `FRuntimeFileTextureResult`
 

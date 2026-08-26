@@ -11,6 +11,7 @@
 #include "MediaTexture.h"
 #include "Misc/Paths.h"
 #include "RuntimeFileTextureInternal.h"
+#include "RuntimeFileTextureLog.h"
 
 URuntimeFileTextureComponent::URuntimeFileTextureComponent()
 {
@@ -110,6 +111,8 @@ void URuntimeFileTextureComponent::StopVideo()
 {
 	if (RuntimeMediaPlayer)
 	{
+		RuntimeMediaPlayer->OnMediaOpened.RemoveDynamic(this, &URuntimeFileTextureComponent::HandleMediaOpened);
+		RuntimeMediaPlayer->OnMediaOpenFailed.RemoveDynamic(this, &URuntimeFileTextureComponent::HandleMediaOpenFailed);
 		RuntimeMediaPlayer->Close();
 		RuntimeMediaPlayer = nullptr;
 	}
@@ -245,7 +248,10 @@ FRuntimeFileTextureResult URuntimeFileTextureComponent::ApplyVideoFile(const FSt
 	}
 
 	RuntimeFileMediaSource->SetFilePath(FilePath);
+	RuntimeFileTextureInternal::ConfigureMediaPlayer(RuntimeMediaPlayer);
 	RuntimeMediaPlayer->SetLooping(bLoopVideo);
+	RuntimeMediaPlayer->OnMediaOpened.AddDynamic(this, &URuntimeFileTextureComponent::HandleMediaOpened);
+	RuntimeMediaPlayer->OnMediaOpenFailed.AddDynamic(this, &URuntimeFileTextureComponent::HandleMediaOpenFailed);
 	RuntimeMediaTexture->SetMediaPlayer(RuntimeMediaPlayer);
 	RuntimeMediaTexture->UpdateResource();
 	RuntimeMediaSoundComponent->bIsUISound = true;
@@ -285,6 +291,31 @@ FRuntimeFileTextureResult URuntimeFileTextureComponent::ApplyVideoFile(const FSt
 	RuntimeMediaPlayer->Play();
 	CacheLastResult(TextureResult);
 	return TextureResult;
+}
+
+void URuntimeFileTextureComponent::HandleMediaOpened(FString OpenedUrl)
+{
+	const FName RequestedPlayer = RuntimeFileTextureInternal::GetDesiredMediaPlayerName();
+	const FName ActivePlayer = RuntimeMediaPlayer ? RuntimeMediaPlayer->GetPlayerName() : NAME_None;
+	if (ActivePlayer == RequestedPlayer)
+	{
+		UE_LOG(LogRuntimeFileTexture, Display,
+			TEXT("Video opened [RequestedPlayer=%s ActivePlayer=%s URL=%s]"),
+			*RequestedPlayer.ToString(), *ActivePlayer.ToString(), *OpenedUrl);
+	}
+	else
+	{
+		UE_LOG(LogRuntimeFileTexture, Warning,
+			TEXT("Video opened with unexpected player [RequestedPlayer=%s ActivePlayer=%s URL=%s]"),
+			*RequestedPlayer.ToString(), *ActivePlayer.ToString(), *OpenedUrl);
+	}
+}
+
+void URuntimeFileTextureComponent::HandleMediaOpenFailed(FString FailedUrl)
+{
+	UE_LOG(LogRuntimeFileTexture, Error,
+		TEXT("Video open failed [RequestedPlayer=%s URL=%s]"),
+		*RuntimeFileTextureInternal::GetDesiredMediaPlayerName().ToString(), *FailedUrl);
 }
 
 void URuntimeFileTextureComponent::CacheLastResult(const FRuntimeFileTextureResult& Result)

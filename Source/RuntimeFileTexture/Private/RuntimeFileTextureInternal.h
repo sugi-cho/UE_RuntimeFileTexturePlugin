@@ -3,9 +3,12 @@
 #include "CoreMinimal.h"
 
 class UTexture2D;
+class UMediaPlayer;
 
 namespace RuntimeFileTextureInternal
 {
+	const FName& GetDesiredMediaPlayerName();
+	void ConfigureMediaPlayer(UMediaPlayer* MediaPlayer);
 	bool SelectFileDialog(FString& OutFilePath);
 	bool IsSupportedImageFile(const FString& FilePath);
 	bool IsSupportedVideoFile(const FString& FilePath);

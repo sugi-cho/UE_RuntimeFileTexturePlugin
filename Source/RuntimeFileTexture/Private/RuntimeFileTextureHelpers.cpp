@@ -6,6 +6,21 @@
 #include "Misc/Paths.h"
 #include "Modules/ModuleManager.h"
 #include "Engine/Texture2D.h"
+#include "MediaPlayer.h"
+
+const FName& RuntimeFileTextureInternal::GetDesiredMediaPlayerName()
+{
+	static const FName ElectraPlayerName(TEXT("ElectraPlayer"));
+	return ElectraPlayerName;
+}
+
+void RuntimeFileTextureInternal::ConfigureMediaPlayer(UMediaPlayer* MediaPlayer)
+{
+	if (MediaPlayer)
+	{
+		MediaPlayer->SetDesiredPlayerName(GetDesiredMediaPlayerName());
+	}
+}
 
 namespace
 {
