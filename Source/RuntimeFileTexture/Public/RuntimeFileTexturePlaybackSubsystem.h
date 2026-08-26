@@ -6,6 +6,7 @@
 
 class UFileMediaSource;
 class UMediaPlayer;
+class UMediaSoundComponent;
 class UMediaTexture;
 class UMeshComponent;
 
@@ -33,6 +34,9 @@ private:
 
 	UPROPERTY(Transient)
 	TObjectPtr<UMediaTexture> RuntimeMediaTexture = nullptr;
+
+	UPROPERTY(Transient)
+	TObjectPtr<UMediaSoundComponent> RuntimeMediaSoundComponent = nullptr;
 
 	UPROPERTY(Transient)
 	TObjectPtr<UFileMediaSource> RuntimeFileMediaSource = nullptr;

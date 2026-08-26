@@ -8,6 +8,7 @@
 class UFileMediaSource;
 class UMaterialInstanceDynamic;
 class UMediaPlayer;
+class UMediaSoundComponent;
 class UMediaTexture;
 class AActor;
 class UMeshComponent;
@@ -20,6 +21,7 @@ class RUNTIMEFILETEXTURE_API URuntimeFileTextureComponent : public UActorCompone
 
 public:
 	URuntimeFileTextureComponent();
+	virtual void OnComponentDestroyed(bool bDestroyingHierarchy) override;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Runtime File Texture")
 	TObjectPtr<AActor> TargetMesh = nullptr;
@@ -44,6 +46,9 @@ public:
 
 	UPROPERTY(Transient)
 	TObjectPtr<UMediaTexture> RuntimeMediaTexture = nullptr;
+
+	UPROPERTY(Transient)
+	TObjectPtr<UMediaSoundComponent> RuntimeMediaSoundComponent = nullptr;
 
 	UPROPERTY(Transient)
 	TObjectPtr<UFileMediaSource> RuntimeFileMediaSource = nullptr;

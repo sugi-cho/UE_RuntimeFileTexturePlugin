@@ -16,6 +16,7 @@ public class RuntimeFileTexture : ModuleRules
 
 		PrivateDependencyModuleNames.AddRange(new string[]
 		{
+			"AudioMixer",
 			"ImageWrapper",
 			"Projects"
 		});

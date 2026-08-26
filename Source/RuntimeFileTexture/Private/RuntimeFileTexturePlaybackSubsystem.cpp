@@ -2,8 +2,10 @@
 
 #include "FileMediaSource.h"
 #include "MediaPlayer.h"
+#include "MediaSoundComponent.h"
 #include "MediaTexture.h"
 #include "Components/MeshComponent.h"
+#include "GameFramework/Actor.h"
 #include "Misc/Paths.h"
 #include "Misc/Timespan.h"
 
@@ -23,7 +25,9 @@ bool URuntimeFileTexturePlaybackSession::Initialize(UMeshComponent* InTargetMesh
 	RuntimeMediaPlayer = NewObject<UMediaPlayer>(this);
 	RuntimeMediaTexture = NewObject<UMediaTexture>(this);
 	RuntimeFileMediaSource = NewObject<UFileMediaSource>(this);
-	if (!RuntimeMediaPlayer || !RuntimeMediaTexture || !RuntimeFileMediaSource)
+	AActor* TargetOwner = TargetMesh->GetOwner();
+	RuntimeMediaSoundComponent = NewObject<UMediaSoundComponent>(TargetOwner ? static_cast<UObject*>(TargetOwner) : this);
+	if (!RuntimeMediaPlayer || !RuntimeMediaTexture || !RuntimeMediaSoundComponent || !RuntimeFileMediaSource)
 	{
 		OutError = TEXT("Failed to open video media source.");
 		Stop();
@@ -35,6 +39,18 @@ bool URuntimeFileTexturePlaybackSession::Initialize(UMeshComponent* InTargetMesh
 	RuntimeMediaPlayer->OnEndReached.AddDynamic(this, &URuntimeFileTexturePlaybackSession::HandleEndReached);
 	RuntimeMediaTexture->SetMediaPlayer(RuntimeMediaPlayer);
 	RuntimeMediaTexture->UpdateResource();
+	RuntimeMediaSoundComponent->bIsUISound = true;
+	RuntimeMediaSoundComponent->SetMediaPlayer(RuntimeMediaPlayer);
+	if (TargetOwner)
+	{
+		TargetOwner->AddInstanceComponent(RuntimeMediaSoundComponent);
+		RuntimeMediaSoundComponent->SetupAttachment(TargetMesh.Get());
+		RuntimeMediaSoundComponent->RegisterComponent();
+	}
+	else if (UWorld* World = TargetMesh->GetWorld())
+	{
+		RuntimeMediaSoundComponent->RegisterComponentWithWorld(World);
+	}
 
 	if (!RuntimeMediaPlayer->OpenSource(RuntimeFileMediaSource))
 	{
@@ -58,9 +74,16 @@ void URuntimeFileTexturePlaybackSession::Stop()
 	{
 		RuntimeMediaTexture->SetMediaPlayer(nullptr);
 	}
+	if (RuntimeMediaSoundComponent)
+	{
+		RuntimeMediaSoundComponent->SetMediaPlayer(nullptr);
+		RuntimeMediaSoundComponent->Stop();
+		RuntimeMediaSoundComponent->DestroyComponent();
+	}
 
 	RuntimeMediaPlayer = nullptr;
 	RuntimeMediaTexture = nullptr;
+	RuntimeMediaSoundComponent = nullptr;
 	RuntimeFileMediaSource = nullptr;
 	TargetMesh.Reset();
 	bLooping = true;

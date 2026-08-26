@@ -12,7 +12,7 @@ Windows のローカル画像・動画ファイルを選んで、メッシュの
 
 - ファイル選択ダイアログを表示
 - 画像を `UTexture2D` として適用
-- 動画を `UMediaPlayer` / `UMediaTexture` / `UFileMediaSource` で適用
+- 動画を `UMediaPlayer` / `UMediaTexture` / `UFileMediaSource` で適用し、音声トラックがあれば再生
 - Level 上の `StaticMeshActor` を含む、MeshComponent を持つ Actor に対応
 
 ## Component の使い方
@@ -114,6 +114,7 @@ static FRuntimeFileTextureResult ApplyFileToMesh(
 
 - 既に Dynamic Material Instance がある場合は、それを再利用して Texture Parameter だけを更新します。
 - 動画の場合は `UMediaTexture` を作成して、`ApplyTextureToMesh` 経由で適用します。
+- 同じ `UMediaPlayer` に `UMediaSoundComponent` を接続するため、動画に音声トラックがあれば映像と一緒に再生します。
 
 ### 戻り値 `FRuntimeFileTextureResult`
 

@@ -7,6 +7,7 @@
 #include "Materials/MaterialInstanceDynamic.h"
 #include "FileMediaSource.h"
 #include "MediaPlayer.h"
+#include "MediaSoundComponent.h"
 #include "MediaTexture.h"
 #include "Misc/Paths.h"
 #include "RuntimeFileTextureInternal.h"
@@ -14,6 +15,12 @@
 URuntimeFileTextureComponent::URuntimeFileTextureComponent()
 {
 	PrimaryComponentTick.bCanEverTick = false;
+}
+
+void URuntimeFileTextureComponent::OnComponentDestroyed(bool bDestroyingHierarchy)
+{
+	StopVideo();
+	Super::OnComponentDestroyed(bDestroyingHierarchy);
 }
 
 FRuntimeFileTextureResult URuntimeFileTextureComponent::SelectFile()
@@ -109,6 +116,13 @@ void URuntimeFileTextureComponent::StopVideo()
 	if (RuntimeMediaTexture)
 	{
 		RuntimeMediaTexture->SetMediaPlayer(nullptr);
+	}
+	if (RuntimeMediaSoundComponent)
+	{
+		RuntimeMediaSoundComponent->SetMediaPlayer(nullptr);
+		RuntimeMediaSoundComponent->Stop();
+		RuntimeMediaSoundComponent->DestroyComponent();
+		RuntimeMediaSoundComponent = nullptr;
 	}
 	RuntimeMediaTexture = nullptr;
 	RuntimeFileMediaSource = nullptr;
@@ -218,8 +232,10 @@ FRuntimeFileTextureResult URuntimeFileTextureComponent::ApplyVideoFile(const FSt
 
 	RuntimeMediaPlayer = NewObject<UMediaPlayer>(this);
 	RuntimeMediaTexture = NewObject<UMediaTexture>(this);
+	AActor* SoundOwner = TargetMesh ? TargetMesh.Get() : GetOwner();
+	RuntimeMediaSoundComponent = NewObject<UMediaSoundComponent>(SoundOwner ? static_cast<UObject*>(SoundOwner) : this);
 	RuntimeFileMediaSource = NewObject<UFileMediaSource>(this);
-	if (!RuntimeMediaPlayer || !RuntimeMediaTexture || !RuntimeFileMediaSource)
+	if (!RuntimeMediaPlayer || !RuntimeMediaTexture || !RuntimeMediaSoundComponent || !RuntimeFileMediaSource)
 	{
 		FRuntimeFileTextureResult Result;
 		Result.FilePath = FilePath;
@@ -232,10 +248,26 @@ FRuntimeFileTextureResult URuntimeFileTextureComponent::ApplyVideoFile(const FSt
 	RuntimeMediaPlayer->SetLooping(bLoopVideo);
 	RuntimeMediaTexture->SetMediaPlayer(RuntimeMediaPlayer);
 	RuntimeMediaTexture->UpdateResource();
+	RuntimeMediaSoundComponent->bIsUISound = true;
+	RuntimeMediaSoundComponent->SetMediaPlayer(RuntimeMediaPlayer);
+	if (SoundOwner)
+	{
+		SoundOwner->AddInstanceComponent(RuntimeMediaSoundComponent);
+		if (FString MeshError; UMeshComponent* MeshComponent = ResolveTargetMesh(MeshError))
+		{
+			RuntimeMediaSoundComponent->SetupAttachment(MeshComponent);
+		}
+		RuntimeMediaSoundComponent->RegisterComponent();
+	}
+	else if (UWorld* World = GetWorld())
+	{
+		RuntimeMediaSoundComponent->RegisterComponentWithWorld(World);
+	}
 
 	const FRuntimeFileTextureResult TextureResult = ApplyTextureToMesh(RuntimeMediaTexture, ERuntimeFileTextureType::Video, FilePath);
 	if (!TextureResult.bSuccess)
 	{
+		StopVideo();
 		CacheLastResult(TextureResult);
 		return TextureResult;
 	}
@@ -245,6 +277,7 @@ FRuntimeFileTextureResult URuntimeFileTextureComponent::ApplyVideoFile(const FSt
 		FRuntimeFileTextureResult Result;
 		Result.FilePath = FilePath;
 		Result.Error = TEXT("Failed to open video media source.");
+		StopVideo();
 		CacheLastResult(Result);
 		return Result;
 	}
